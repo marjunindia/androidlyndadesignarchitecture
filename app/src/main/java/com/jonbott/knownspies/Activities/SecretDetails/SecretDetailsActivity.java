@@ -18,15 +18,13 @@ import io.realm.Realm;
 
 public class SecretDetailsActivity extends AppCompatActivity {
 
-    private Realm realm = Realm.getDefaultInstance();
-
-    private int spyId = -1;
-    private Spy spy;
 
     ProgressBar progressBar;
     TextView crackingLabel;
     Button finishedButton;
 
+    SecretDetailsPresenter presenter;
+    int spyId;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -34,7 +32,17 @@ public class SecretDetailsActivity extends AppCompatActivity {
 
         setupUI();
         parseBundle();
-        crackPassword();
+
+    }
+
+
+    private void configure(SecretDetailsPresenter secretDetailsPresenter){
+        this.presenter=secretDetailsPresenter;
+        presenter.crackPassword(password->
+        {
+            progressBar.setVisibility(View.GONE);
+            crackingLabel.setText(presenter.password);
+        });
     }
 
     //region Helper Methods
@@ -48,24 +56,19 @@ public class SecretDetailsActivity extends AppCompatActivity {
 
     }
 
-    private void crackPassword() {
-        Threading.async(()-> {
-            //fake processing work
-            Thread.sleep(2000);
-            return true;
-        }, success -> {
-            progressBar.setVisibility(View.GONE);
-            crackingLabel.setText(spy.password);
-        });
+
+    public void setupPresenter(int spyId){
+        configure(new SecretDetailsPresenter(spyId));
     }
+
 
     private void parseBundle() {
         Bundle b = getIntent().getExtras();
 
         if(b != null)
             spyId = b.getInt(Constants.spyIdKey);
+            setupPresenter(spyId);
 
-        spy = getSpy(spyId);
     }
 
     //endregion
@@ -81,10 +84,7 @@ public class SecretDetailsActivity extends AppCompatActivity {
     //endregion
 
     //region Data loading
-    private Spy getSpy(int id) {
-        Spy tempSpy = realm.where(Spy.class).equalTo("id", id).findFirst();
-        return realm.copyFromRealm(tempSpy);
-    }
+
     //endregion
 
 

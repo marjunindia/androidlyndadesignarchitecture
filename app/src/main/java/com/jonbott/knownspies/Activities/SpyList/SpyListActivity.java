@@ -38,10 +38,7 @@ public class SpyListActivity extends AppCompatActivity {
 
     private List<Spy> spies = new ArrayList<>();
     private RecyclerView recyclerView;
-
-    private SpyTranslator spyTranslator = new SpyTranslator();
-    private Realm realm = Realm.getDefaultInstance();
-    private Gson gson = new Gson();
+    SpyListPresenter mSpyListPresenter=new SpyListPresenter();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +48,16 @@ public class SpyListActivity extends AppCompatActivity {
 
         setupUI();
         setupData();
+        loadData();
+    }
+
+    private void loadData() {
+        mSpyListPresenter.loadData(spices->{
+            this.spies=spices;
+            SpyViewAdapter spyViewAdapter=(SpyViewAdapter)recyclerView.getAdapter();
+            spyViewAdapter.spies=this.spies;
+            spyViewAdapter.notifyDataSetChanged();
+        },this::notifyDataReceived);
     }
 
     //region Helper Methods
@@ -65,24 +72,12 @@ public class SpyListActivity extends AppCompatActivity {
     private void setupData() {
         try {
             initializeListView();
-            initializeData();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
     //endregion
 
-    //region Data Process specific to SpyListActivity
-    private void initializeData() throws Exception {
-
-        loadSpiesFromLocal();
-        notifyDataReceived(Source.local);
-
-        loadJson(json -> {
-            notifyDataReceived(Source.network);
-            persistJson(json, () -> loadSpiesFromLocal());
-        });
-    }
 
     //endregion
 
@@ -100,108 +95,7 @@ public class SpyListActivity extends AppCompatActivity {
 
     //endregion
 
-    //region Database Methods
 
-    private void loadSpiesFromLocal() throws Exception {
-        Log.d(TAG, "Loading spies from DB");
-        loadSpiesFromRealm(spyList -> {
-
-            spies = spyList;
-
-            SpyViewAdapter adapter = (SpyViewAdapter) recyclerView.getAdapter();
-
-            adapter.spies = spyList;
-            adapter.notifyDataSetChanged();
-        });
-    }
-
-    private void persistJson(String json, Action finished) {
-        Threading.async(() -> {
-
-            clearSpies(() -> {
-                List<SpyDTO> dtos = convertJson(json);
-                dtos.forEach(dto -> dto.initialize());
-                persistDTOs(dtos);
-
-                Threading.dispatchMain(() -> finished.run());
-            });
-
-            return true;
-        });
-    }
-
-    private void loadSpiesFromRealm(Consumer<List<Spy>> finished) throws Exception {
-        RealmResults<Spy> spyResults = realm.where(Spy.class).findAll();
-
-        List<Spy> spies = realm.copyFromRealm(spyResults);
-        finished.accept(spies);
-    }
-
-    private void clearSpies(Action finished) throws Exception {
-        Log.d(TAG, "clearing DB");
-
-        Realm backgroundRealm = Realm.getInstance(realm.getConfiguration());
-        backgroundRealm.executeTransaction(r -> r.delete(Spy.class));
-
-        finished.run();
-    }
-
-    private void persistDTOs(List<SpyDTO> dtos) {
-        Log.d(TAG, "persisting dtos to DB");
-
-        Realm backgroundRealm = Realm.getInstance(realm.getConfiguration());
-        backgroundRealm.executeTransaction(r -> r.delete(Spy.class));
-
-        //ignore result and just save in realm
-        dtos.forEach(dto -> spyTranslator.translate(dto, backgroundRealm));
-    }
-
-    //endregion
-
-    //region Network Methods
-
-    private void loadJson(Consumer<String> finished) {
-        Log.d(TAG, "loading json from web");
-
-        Threading.async(() -> makeRequest(), finished, null);
-    }
-
-    @Nullable
-    private List<SpyDTO> convertJson(String json) {
-        Log.d(TAG, "converting json to dtos");
-
-        TypeToken<List<SpyDTO>> token = new TypeToken<List<SpyDTO>>(){};
-
-        return gson.fromJson(json, token.getType());
-    }
-
-    private String makeRequest() {
-        String result = "";
-        try {
-            result = run("http://localhost:8080/");
-
-            //fake server delay
-            Thread.sleep(2000);
-
-        } catch (Exception e) {
-            Log.d(TAG, "makeWebCall: Failed!");
-            e.printStackTrace();
-        }
-
-        return result;
-    }
-
-    private String run(String url) throws IOException {
-        OkHttpClient client = new OkHttpClient();
-        Request request = new Request.Builder()
-                .url(url)
-                .build();
-
-        Response response = client.newCall(request).execute();
-        return response.body().string();
-    }
-
-    //endregion
 
     //region List View Adapter
 

@@ -22,10 +22,12 @@ public class SpyDetailsActivity extends AppCompatActivity {
     private int spyId = -1;
 
     private ImageView profileImage;
-    private TextView  nameTextView;
-    private TextView  ageTextView;
-    private TextView  genderTextView;
+    private TextView nameTextView;
+    private TextView ageTextView;
+    private TextView genderTextView;
     private ImageButton calculateButton;
+
+    private SpyDetailsPresenter presenter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,53 +35,55 @@ public class SpyDetailsActivity extends AppCompatActivity {
         setContentView(R.layout.activity_spy_details);
         setupUI();
         parseBundle();
+
+    }
+
+    public void configure(SpyDetailsPresenter spyDetailsPresenter) {
+        this.presenter = spyDetailsPresenter;
+        this.presenter.configureWithContext(this);
     }
 
 
     //region Helper Methods
 
     private void setupUI() {
-        profileImage    = (ImageView)   findViewById(R.id.details_profile_image);
-        nameTextView    = (TextView)    findViewById(R.id.details_name);
-        ageTextView     = (TextView)    findViewById(R.id.details_age);
-        genderTextView  = (TextView)    findViewById(R.id.details_gender);
+        profileImage = (ImageView) findViewById(R.id.details_profile_image);
+        nameTextView = (TextView) findViewById(R.id.details_name);
+        ageTextView = (TextView) findViewById(R.id.details_age);
+        genderTextView = (TextView) findViewById(R.id.details_gender);
         calculateButton = (ImageButton) findViewById(R.id.calculate_button);
+        calculateButton.setOnClickListener(v -> gotoSecretDetails());
     }
 
 
-    private void configureWith(Spy spy) {
-        int imageId = Helper.resourceIdWith(this, spy.imageName);
+    private void configureUIWith(SpyDetailsPresenter spyDetailsPresenter) {
 
-        profileImage.setImageResource(imageId);
-        nameTextView.setText(spy.name);
-        ageTextView.setText(String.valueOf(spy.age));
-        genderTextView.setText(spy.gender);
+        profileImage.setImageResource(presenter.imageId);
+        nameTextView.setText(spyDetailsPresenter.name);
+        ageTextView.setText(String.valueOf(spyDetailsPresenter.age));
+        genderTextView.setText(spyDetailsPresenter.gender);
 
-        calculateButton.setOnClickListener(v -> gotoSecretDetails());
+
+    }
+
+
+    // dependency methods
+    private void getPresenterFor(int spyId) {
+        configure(new SpyDetailsPresenter(spyId));
     }
 
     private void parseBundle() {
         Bundle b = getIntent().getExtras();
 
-        if(b != null)
+        if (b != null)
             spyId = b.getInt(Constants.spyIdKey);
+         getPresenterFor(spyId);
 
-        if(spyId != -1) {
-            Spy spy = getSpy(spyId);
-            configureWith(spy);
-        }
+
     }
 
     //endregion
 
-    //region Data loading
-
-    private Spy getSpy(int id) {
-        Spy tempSpy = realm.where(Spy.class).equalTo("id", id).findFirst();
-        return realm.copyFromRealm(tempSpy);
-    }
-
-    //endregion
 
     //region navigation
 
@@ -87,10 +91,10 @@ public class SpyDetailsActivity extends AppCompatActivity {
         if (spyId == -1) return;
 
         Bundle bundle = new Bundle();
-               bundle.putInt(Constants.spyIdKey, spyId);
+        bundle.putInt(Constants.spyIdKey, presenter.spyId);
 
         Intent intent = new Intent(SpyDetailsActivity.this, SecretDetailsActivity.class);
-               intent.putExtras(bundle);
+        intent.putExtras(bundle);
 
         startActivity(intent);
     }
