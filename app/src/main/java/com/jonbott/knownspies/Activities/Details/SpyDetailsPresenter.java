@@ -3,7 +3,9 @@ package com.jonbott.knownspies.Activities.Details;
 import android.content.Context;
 
 import com.jonbott.knownspies.Helpers.Helper;
+import com.jonbott.knownspies.ModelLayer.DTOs.SpyDTO;
 import com.jonbott.knownspies.ModelLayer.Database.Realm.Spy;
+import com.jonbott.knownspies.ModelLayer.ModelLayer;
 
 import io.realm.Realm;
 
@@ -13,36 +15,37 @@ import io.realm.Realm;
 
 class SpyDetailsPresenter {
 
-    public int spyId;
-    String age;
-    String name;
-    String gender;
-    String imageName;
-    int imageId;
-    private Realm realm = Realm.getDefaultInstance();
-    private Context mContext;
+    ModelLayer modelLayer = new ModelLayer();
 
+
+    public int spyId;
+    public String age;
+    public String name;
+    public String gender;
+    public String imageName;
+    public int imageId;
+
+    private Context context;
+    private SpyDTO spy;
 
     public SpyDetailsPresenter(int spyId) {
-        this.spyId=spyId;
-        Spy spy=getSpy(spyId);
-        age=String.valueOf(spy.age);
-        name=spy.name;
-        gender=spy.gender;
-        imageName=spy.imageName;
+        this.spyId = spyId;
+
+        spy = modelLayer.spyForId(spyId);
+
+        configureForSpy();
     }
 
-    public void configureWithContext(SpyDetailsActivity context) {
-        this.mContext=context;
-        imageId= Helper.resourceIdWith(context,imageName);
+    private void configureForSpy() {
+        age = String.valueOf(spy.age);
+        name = spy.name;
+        gender = spy.gender.name();
+        imageName = spy.imageName;
     }
 
-    //region Data loading
-
-    private Spy getSpy(int id) {
-        Spy tempSpy = realm.where(Spy.class).equalTo("id", id).findFirst();
-        return realm.copyFromRealm(tempSpy);
+    public void configureWithContext(Context context) {
+        this.context = context;
+        imageId = Helper.resourceIdWith(context, imageName);
     }
 
-    //endregion
 }

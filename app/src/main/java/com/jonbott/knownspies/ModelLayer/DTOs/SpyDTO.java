@@ -1,11 +1,12 @@
 package com.jonbott.knownspies.ModelLayer.DTOs;
 
 import com.jonbott.knownspies.ModelLayer.Enums.Gender;
+import com.jonbott.knownspies.ModelLayer.Translation.DTOType;
 
 import java.util.Random;
 
 public class SpyDTO {
-
+    public static DTOType dtoType = DTOType.spy;
     public int id;
     public int age;
     public String name;
